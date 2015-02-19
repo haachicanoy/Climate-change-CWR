@@ -96,13 +96,117 @@ lapply(cropList, function(crop){
   
 })
 
-# Seleccionar puntos de background para cada especie (o cultivo ... preguntar)
+# Include altitude layer with the same resolution than others rasters
+alt <- "/curie_data/ncastaneda/geodata/alt_2-5m/aligned-bio/alt.asc"
+alt <- raster(alt)
+bio_example <- raster("/curie_data/storage/future_clm_cimp5/bcc_csm1_1/bio_1.asc") # Whatever layer is good
+alt2 <- raster::resample(alt,bio_example,method="bilinear")
+rm(bio_example,alt)
+gcm_dirs <- list.dirs("/curie_data/storage/future_clm_cimp5",full.names=T,recursive=F)
+library(parallel)
+writeRAS <- function(i){writeRaster(alt2,paste0(gcm_dirs[[i]],"/bio_0.asc"),overwrite=T)}
+mclapply(1:length(gcm_dirs), writeRAS, mc.cores=10)
 
-sp_occ <- read.csv(...)
-sp_occ <- unique(sp_occ)
-extreme_coord <- c(min(sp_occ$lon),max(sp_occ$lon),min(sp_occ$lat),max(sp_occ$lat))
-extreme_coord <- extreme_coord+0.4495392 # Buffer of 50 km
-ext <- extent(extreme_coord); rm(extreme_coord)
-mask.test <- crop(mask,ext); rm(ext)
 
-sampleRandom(...)
+## Realizar cortes por coordenadas de ocurrencias extremas
+
+crops <- list.dirs("/curie_data/storage/climate_change",full.names=F,recursive=F)
+
+## Function to crop the future and current climate
+
+# Read future and current climate information for each model
+library(parallel)
+fcList <- list.dirs(paste0("/curie_data/storage/future_clm_cimp5"),full.names=T,recursive=F)
+readRasters <- function(i)
+{
+  bios <- list.files(fcList[[i]],pattern=".asc$",full.names=T)
+  rasters <- lapply(1:length(bios), function(j){library(raster); r <- raster(bios[[j]]); return(r)})
+  rasters <- stack(rasters)
+  return(rasters)
+}
+fcRasters <- mclapply(1:length(fcList), readRasters, mc.cores=20)
+models <- list.dirs(paste0("/curie_data/storage/future_clm_cimp5"),full.names=F,recursive=F)
+names(fcRasters) <- models
+g <- gc()
+rm(g)
+
+# Function to crop raster files
+createBackFile <- function(crop) # Se corre en linea
+{
+  library(raster)
+  library(ncdf)
+  cat("Processing:",crop,"\n")
+  spList <- list.files(paste0("/curie_data/storage/climate_change/",crop,"/occurrence_files"),pattern=".csv$",full.names=T)
+  spName <- list.files(paste0("/curie_data/storage/climate_change/",crop,"/occurrence_files"),pattern=".csv$",full.names=F)
+  spName <- gsub(pattern=".csv",replacement="",spName)
+  lapply(1:length(spList), function(i)
+  {
+    sp_occ <- read.csv(spList[[i]])
+    sp_occ <- unique(sp_occ)
+    extreme_coord <- c(min(sp_occ$lon),max(sp_occ$lon),min(sp_occ$lat),max(sp_occ$lat))
+    extreme_coord <- extreme_coord+0.4495392 # Buffer of 50 km
+    extreme_coord <- data.frame(lon=c(extreme_coord[1],extreme_coord[2]),lat=c(extreme_coord[4],extreme_coord[3]))
+    
+    fcDir <- paste0("/curie_data/storage/climate_change/",crop,"/future_climate")
+    if(!file.exists(fcDir)){dir.create(fcDir)}
+    fcDirSp <- paste0(fcDir,"/",spName[[i]])
+    if(!file.exists(fcDirSp)){dir.create(fcDirSp)}
+    
+    lapply(1:length(fcRasters), function(k)
+    {
+      fcRastersProc <- unstack(fcRasters[[k]])
+      cells         <- cellsFromExtent(fcRastersProc[[1]],extent=extent(fcRastersProc[[1]]))
+      infoCells     <- data.frame(cell=cells,xyFromCell(fcRastersProc[[1]],cells,spatial=F)); cells <- NULL
+      infoCells     <- base::subset(infoCells,subset= x>=extreme_coord[1,1] & x<=extreme_coord[2,1] & y<=extreme_coord[1,2] & y>=extreme_coord[2,2], select=c(cell,x,y))
+      library(parallel) # Se corre en paralelo
+      cropRasters <- function(j){z <- rasterFromCells(fcRastersProc[[j]], cells=infoCells$cell); z[] <- fcRastersProc[[j]][][infoCells$cell]; return(z)}
+      fcRastersProc <- stack(mclapply(1:length(fcRastersProc),cropRasters,mc.cores=length(fcRastersProc)))
+      fcRastersCrop <- fcRastersProc; rm(fcRastersProc)
+      writeRaster(fcRastersCrop, filename=paste0(fcDirSp,"/",models[[k]],".nc"), format="CDF", overwrite=T)
+    }
+    )
+  }
+  )
+}
+
+# Apply to all crops
+lapply(1:length(crops),function(i){createBackFile(crops[[i]]); return("Done")})
+
+# Function to create background files for each specie
+# Step 1. Leer datos de ocurrencia para cada especie
+# Step 2. Leer solo 1 raster de clima generado por especie
+# Step 3. A partir de este raster generar 10000 puntos aleatorios como background
+# Step 4. Guardar dichas coordenadas
+library(parallel)
+backGenFunc <- function(i)
+{
+  library(dismo)
+  cat("Processing:",crops[[i]],"\n")
+  spList <- list.files(paste0("/curie_data/storage/climate_change/",crop,"/occurrence_files"),pattern=".csv$",full.names=T)
+  spName <- list.files(paste0("/curie_data/storage/climate_change/",crop,"/occurrence_files"),pattern=".csv$",full.names=F)
+  spName <- gsub(pattern=".csv",replacement="",spName)
+  lapply(1:length(spList),function(j)
+  {
+    sp_occ <- read.csv(spList[[i]])
+    sp_occ <- unique(sp_occ)
+    
+    r_file <- raster(paste0("/curie_data/storage/climate_change/",crop,"/future_climate/",spName,"/current.nc"))
+    backFile <- dismo::randomPoints(mask=r_file,n=10000,p=sp_occ[,c("lon","lat")])
+    backFile$Taxon <- spName
+    names(backFile)[1:2] <- c("lon","lat")
+    backFile <- backFile[,c("Taxon","lon","lat")]
+    backDir <- paste0("/curie_data/storage/climate_change/",crop,"/backgroundFiles")
+    if(!file.exists(backDir)){dir.create(backDir)}
+    write.csv(backFile,paste0(backDir,"/",spName,".csv"),row.names=F)
+  })
+  return("Done")
+}
+mclapply(1:length(crops),backGenFunc,mc.cores=20)
+
+# Estrategia de modelación
+# Step 1. Leer datos de ocurrencia por especie
+# Step 2. Leer datos de background por especie
+# Step 3. Leer información climática, presente y futuro (31 escenarios)
+# Step 4. Correr algoritmo MaxEnt para los 31 diferentes escenarios por especie
+# replicando 5 veces cada modelo mediante validación cruzada
+# Step 5. Almacenar los resultados por cultivo, especie, modelo en formato .nc
