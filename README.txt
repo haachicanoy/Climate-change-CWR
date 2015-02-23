@@ -1,4 +1,4 @@
-CWR Climate Change Analysis
+﻿CWR Climate Change Analysis
 H. Achicanoy & N. Castañeda
 CIAT, 2015
 
@@ -12,9 +12,9 @@ RUTAS IMPORTANTES
 
 DESCRIPCIÓN DE LOS DATOS
 
-Datos de ocurrencia: para 26 cultivos con diferente número de parientes silvestres asociados. Cada archivo se encuentra escrito en formato .csv con las variables:
+Datos de ocurrencia: 26 cultivos con diferente número de parientes silvestres asociados. Cada archivo se encuentra escrito en formato .csv con las variables:
 
-- Taxon. Que corresponde al nombre del taxón
+- Taxon. Nombre del taxón
 - lon. Longitud medida en grados decimales
 - lat. Latitud medida en grados decimales
 
@@ -22,5 +22,46 @@ Datos climáticos: 30 GCMs para el RCP 4.5 año 2050 que contienen las 19 variab
 
 DESCRIPCIÓN DE LAS ETAPAS A EJECUTAR
 
-1. Por cada taxón cortar los rasters climáticos (por GCM) generando un buffer de 50 km alrededor de las coordenadas más extremas.
-2. 
+1. Por cada taxón cortar los rasters climáticos (por GCM y condiciones actuales) generando un buffer de 50 km alrededor de las coordenadas más extremas.
+2. Generar los datos de background en los lugares definidos en la etapa anterior por taxón.
+3. Por cada combinación taxón-GCM correr MaxEnt realizando una validación cruzada para 10 subparticiones de los datos (70% training, 30% testing).
+4. Utilizar varios estadísticos de validación para evaluar los resultados (AUC, TSS, Kappa index, ...)
+5. Guardar todos los resultados en formato NCDF
+6. Realizar un análisis de varianza a partir de las estadísticas de evaluación por todas las combinaciones generadas
+7. Ejecutar el ensamble de modelos para cada taxón
+8. Evaluar el porcentaje de cambio en la distribución de las especies bajo el escenario de cambio climático estudiado
+
+Problemas con: Phaseolus_persistentus (Crop: bean)
+...
+Processing: bambara
+Processing: bean
+Error in (function (classes, fdef, mtable)  :
+  unable to find an inherited method for function ‘raster’ for signature ‘"try-error"’
+...
+
+Continua el procesamiento a partir de Cajanus
+
+Problemas con: Vigna_unguiculata_letouzeyi (Crop: cowpea)
+...
+Processing: cowpea
+Error in (function (classes, fdef, mtable)  :
+  unable to find an inherited method for function ‘raster’ for signature ‘"try-error"’
+In addition: Warning message:
+In mclapply(1:length(fcRastersProc), cropRasters, mc.cores = length(fcRastersProc)) :
+  all scheduled cores encountered errors in user code
+...
+
+Continua el procesamiento a partir de Daucus
+
+Problemas con: Daucus_carota_drepanensis (Crop: daucus)
+
+Processing: daucus
+Error in (function (classes, fdef, mtable)  :
+  unable to find an inherited method for function ‘raster’ for signature ‘"try-error"’
+In addition: Warning message:
+In mclapply(1:length(fcRastersProc), cropRasters, mc.cores = length(fcRastersProc)) :
+  all scheduled cores encountered errors in user code
+
+Corrección de problemas identificados:
+1. Especies con solo 1 coordenada geográfica
+2. Especies donde la coordenadas extremas tienen una distancia cercana a 0 grados
