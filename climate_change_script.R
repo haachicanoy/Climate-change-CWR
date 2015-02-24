@@ -179,8 +179,8 @@ createBackFile <- function(crop) # Run in line
         }
         )
         
-      } else {cat("Distance between extreme coordinates is 0!")}
-    } else {cat("We only have one coordinate for the analysis!")}
+      } else {cat("Distance between extreme coordinates is 0!\n")}
+    } else {cat("We only have one coordinate for the analysis!\n")}
   }
   )
 }

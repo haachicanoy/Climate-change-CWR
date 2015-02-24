@@ -31,7 +31,7 @@ DESCRIPCIÓN DE LAS ETAPAS A EJECUTAR
 7. Ejecutar el ensamble de modelos para cada taxón
 8. Evaluar el porcentaje de cambio en la distribución de las especies bajo el escenario de cambio climático estudiado
 
-Problemas con: Phaseolus_persistentus (Crop: bean)
+Problemas con: Phaseolus_persistentus (Crop: bean) [SOLUCIONADO]
 ...
 Processing: bambara
 Processing: bean
@@ -41,7 +41,7 @@ Error in (function (classes, fdef, mtable)  :
 
 Continua el procesamiento a partir de Cajanus
 
-Problemas con: Vigna_unguiculata_letouzeyi (Crop: cowpea)
+Problemas con: Vigna_unguiculata_letouzeyi (Crop: cowpea) [SOLUCIONADO]
 ...
 Processing: cowpea
 Error in (function (classes, fdef, mtable)  :
@@ -53,7 +53,7 @@ In mclapply(1:length(fcRastersProc), cropRasters, mc.cores = length(fcRastersPro
 
 Continua el procesamiento a partir de Daucus
 
-Problemas con: Daucus_carota_drepanensis (Crop: daucus)
+Problemas con: Daucus_carota_drepanensis (Crop: daucus) [SOLUCIONADO]
 
 Processing: daucus
 Error in (function (classes, fdef, mtable)  :
@@ -65,3 +65,19 @@ In mclapply(1:length(fcRastersProc), cropRasters, mc.cores = length(fcRastersPro
 Corrección de problemas identificados:
 1. Especies con solo 1 coordenada geográfica
 2. Especies donde la coordenadas extremas tienen una distancia cercana a 0 grados
+
+# Identificación de un nuevo problema
+
+Processing: eggplantNHM
+...
+Processing: Solanum_nigriviolaceum [REVISAR!!!] [PENDIENTE]
+Error in .rasterObjectFromCDF(x, type = objecttype, band = band, ...) :
+  cells are not equally spaced; you should extract values as points
+In addition: Warning messages:
+1: In min(rs) : no non-missing arguments to min; returning Inf
+2: In max(rs) : no non-missing arguments to max; returning -Inf
+3: In min(rs) : no non-missing arguments to min; returning Inf
+
+Se deja este caso aparte y se continua procesando el resto de la información
+
+Continua el procesamiento a partir de Eleusine
