@@ -29,7 +29,7 @@ DESCRIPCIÓN DE LAS ETAPAS A EJECUTAR
 5. Guardar todos los resultados en formato NCDF
 6. Realizar un análisis de varianza a partir de las estadísticas de evaluación por todas las combinaciones generadas
 7. Ejecutar el ensamble de modelos para cada taxón
-8. Evaluar el porcentaje de cambio en la distribución de las especies bajo el escenario de cambio climático estudiado
+8. Evaluar el porcentaje de cambio o migración en la distribución de las especies bajo el escenario de cambio climático estudiado. Fijando un límite de migráción de ...
 
 Problemas con: Phaseolus_persistentus (Crop: bean) [SOLUCIONADO]
 ...
@@ -66,11 +66,11 @@ Corrección de problemas identificados:
 1. Especies con solo 1 coordenada geográfica
 2. Especies donde la coordenadas extremas tienen una distancia cercana a 0 grados
 
-# Identificación de un nuevo problema
+# Identificación de un nuevo problema [Issue 1]
 
 Processing: eggplantNHM
 ...
-Processing: Solanum_nigriviolaceum [REVISAR!!!] [PENDIENTE]
+Processing: Solanum_nigriviolaceum [REVISAR!!!] [SOLUCIONADO] [Número reducido de coordenadas]
 Error in .rasterObjectFromCDF(x, type = objecttype, band = band, ...) :
   cells are not equally spaced; you should extract values as points
 In addition: Warning messages:
@@ -81,3 +81,15 @@ In addition: Warning messages:
 Se deja este caso aparte y se continua procesando el resto de la información
 
 Continua el procesamiento a partir de Eleusine
+
+Problemas con: Lens_culinaris_tomentosus (Crop: lens) [SOLUCIONADO] [Número reducido de coordenadas]
+
+Processing: Lens_culinaris_tomentosus
+Error in .rasterObjectFromCDF(x, type = objecttype, band = band, ...) :
+  cells are not equally spaced; you should extract values as points
+In addition: Warning messages:
+1: In min(rs) : no non-missing arguments to min; returning Inf
+2: In max(rs) : no non-missing arguments to max; returning -Inf
+3: In min(rs) : no non-missing arguments to min; returning Inf
+
+

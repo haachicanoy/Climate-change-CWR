@@ -148,7 +148,7 @@ createBackFile <- function(crop) # Run in line
     sp_occ <- read.csv(spList[[i]]) # Reading occurrence data
     sp_occ <- unique(sp_occ)
     
-    if(nrow(sp_occ)>1)
+    if(nrow(sp_occ)>15) # Only more than 15 coordinates
     {
       extreme_coord <- c(min(sp_occ$lon),max(sp_occ$lon),min(sp_occ$lat),max(sp_occ$lat)) # Identify extreme coordinates
       extreme_coord <- extreme_coord+0.4495392 # Buffer of 50 km
@@ -180,7 +180,7 @@ createBackFile <- function(crop) # Run in line
         )
         
       } else {cat("Distance between extreme coordinates is 0!\n")}
-    } else {cat("We only have one coordinate for the analysis!\n")}
+    } else {cat("Number of coordinates is limited for the analysis!\n")}
   }
   )
 }
@@ -193,28 +193,38 @@ lapply(1:length(crops),function(i){createBackFile(crops[[i]]); return("Done")})
 # Step 2. Leer solo 1 raster de clima generado por especie
 # Step 3. A partir de este raster generar 10000 puntos aleatorios como background
 # Step 4. Guardar dichas coordenadas
+
+crops <- list.dirs("/curie_data/storage/climate_change",full.names=F,recursive=F) # Crops to analyse
+
 library(parallel)
 backGenFunc <- function(i)
 {
   library(dismo)
   cat("Processing:",crops[[i]],"\n")
-  spList <- list.files(paste0("/curie_data/storage/climate_change/",crop,"/occurrence_files"),pattern=".csv$",full.names=T)
-  spName <- list.files(paste0("/curie_data/storage/climate_change/",crop,"/occurrence_files"),pattern=".csv$",full.names=F)
-  spName <- gsub(pattern=".csv",replacement="",spName)
+  spList <- list.files(paste0("/curie_data/storage/climate_change/",crops[[i]],"/future_climate"),full.names=T,recursive=F)
+  spList <- paste0(spList,".csv")
+  spList <- gsub(pattern="future_climate",replacement="occurrence_files",spList)
+  spName <- list.files(paste0("/curie_data/storage/climate_change/",crops[[i]],"/future_climate"),full.names=F)
   lapply(1:length(spList),function(j)
   {
-    cat("Processing:",spName[[i]],"\n")
-    sp_occ <- read.csv(spList[[i]])
+    cat("Processing:",spName[[j]],"\n")
+    sp_occ <- read.csv(spList[[j]])
     sp_occ <- unique(sp_occ)
-    # Read current climate
-    r_file <- raster(paste0("/curie_data/storage/climate_change/",crop,"/future_climate/",spName,"/current.nc"))
-    backFile <- dismo::randomPoints(mask=r_file,n=10000,p=sp_occ[,c("lon","lat")]) # Generate background points
-    backFile$Taxon <- spName
-    names(backFile)[1:2] <- c("lon","lat")
-    backFile <- backFile[,c("Taxon","lon","lat")]
-    backDir <- paste0("/curie_data/storage/climate_change/",crop,"/backgroundFiles")
-    if(!file.exists(backDir)){dir.create(backDir)}
-    write.csv(backFile,paste0(backDir,"/",spName,".csv"),row.names=F)
+    
+    if(nrow(sp_occ)>15){
+      # Read current climate
+      r_file <- raster(paste0("/curie_data/storage/climate_change/",crops[[i]],"/future_climate/",spName[[j]],"/current.nc"))
+      backFile <- as.data.frame(dismo::randomPoints(mask=r_file,n=10000,p=sp_occ[,c("lon","lat")])) # Generate background points
+      backFile$Taxon <- spName[[j]]
+      names(backFile)[1:2] <- c("lon","lat")
+      backFile <- backFile[,c("Taxon","lon","lat")]
+      backDir <- paste0("/curie_data/storage/climate_change/",crops[[i]],"/backgroundFiles")
+      if(!file.exists(backDir)){dir.create(backDir)}
+      write.csv(backFile,paste0(backDir,"/",spName[[j]],".csv"),row.names=F)
+    } else {
+      cat("Number of coordinates is limited for the analysis!\n")
+    }
+    
   })
   return("Done")
 }
@@ -228,23 +238,73 @@ mclapply(1:length(crops),backGenFunc,mc.cores=20)
 # replicando 5 veces cada modelo mediante validación cruzada
 # Step 5. Almacenar los resultados por cultivo, especie, modelo en formato .nc
 
+crops <- list.dirs("/curie_data/storage/climate_change",full.names=F,recursive=F) # Crops to analyse
+
+options(warn=-1)
+library(ncdf)
+library(dismo)
+library(parallel)
+library(PresenceAbsence)
+
 modelingStep <- function(crop)
 {
-  cat("Modeling:",crop,"\n")
-  # Occurrence data x specie
-  taxList <- list.files(dir,pattern=".csv",full.names=T)
-  taxList <- lapply(1:length(taxList),function(i){z <- read.csv(taxList[[i]]); return(z)})
-  # Background data x specie
-  bckList <- list.files(backDir,pattern=".csv",full.names=T)
-  bckList <- lapply(1:length(bckList),function(i){z <- read.csv(bckList[[i]]); return(z)})
-  # Climate data x specie x GCM
-  climDirSp <- paste0("/curie_data/storage/climate_change/",crop,"/",sp)
-  list.files(climDirSp,pattern=".nc$",full.names=T)
-  ## Cross-validation process
-  library(dismo)
-  # 1. Training
-  # 2. Testing
-  ## Ensemble process
+  cat("Processing:",crop,"\n")
+  # Species name
+  spName <- list.files(paste0("/curie_data/storage/climate_change/",crop,"/backgroundFiles"),pattern=".csv",full.names=F)
+  if(length(spName)!=0){
+    spName <- gsub(pattern=".csv",replacement="",spName)
+    
+    # Occurrence data x specie
+    taxList <- list.files(paste0("/curie_data/storage/climate_change/",crop,"/backgroundFiles"),pattern=".csv",full.names=T)
+    taxList <- gsub(pattern="backgroundFiles",replacement="occurrence_files",taxList)
+    taxList <- lapply(1:length(taxList),function(i){z <- read.csv(taxList[[i]]); return(z)})
+    
+    # Background data x specie
+    bckList <- list.files(paste0("/curie_data/storage/climate_change/",crop,"/backgroundFiles"),pattern=".csv",full.names=T)
+    bckList <- lapply(1:length(bckList),function(i){z <- read.csv(bckList[[i]]); return(z)})
+    
+    # Climate data x specie x GCM
+    climDirSp <- paste0("/curie_data/storage/climate_change/",crop,"/future_climate/",spName)
+    climData <- lapply(1:length(climDirSp),function(i){list.files(climDirSp[[i]],pattern=".nc$",full.names=T)})
+    loadRasters <- function(i){lapply(1:length(climData[[i]]),function(j){stack(lapply(1:20,function(k){raster(paste(climData[[i]][[j]]),band=k)}))})}
+    climData <- mclapply(1:length(climData),loadRasters,mc.cores=10)
+    
+    ## Cross-validation process
+    # 1. Training
+    seeds <- c(1235,2358,3581,5819,8191)
+    lapply(1:length(seeds),function(i)
+    {
+      set.seed(seeds[[i]]) # Vary seed
+      fold <- dismo::kfold(taxList[[1]],k=3) # Approximately 33% for testing set
+      occ_test <- taxList[[1]][fold==1,] # Testing set
+      occ_train <- taxList[[1]][fold!=1,] # Training set
+      fit <- dismo::maxent(x=climData[[1]][[1]],p=occ_train[,c("lon","lat")],removeDuplicates=T,args=c("nowarnings")) # Run MaxEnt with training dataset (randomtestpoints=30)
+      evl <- evaluate(fit,p=occ_test[,c("lon","lat")],a=bckList[[1]][,c("lon","lat")],x=climData[[1]][[1]])
+      evl@auc
+      
+      mask <- climData[[1]][[1]][[1]]
+      mask <- ff(1,dim=c(ncell(mask),20),vmode="double")
+      lapply(1:20,function(i){z <- climData[[1]][[1]][[i]]; t <- getValues(z); mask[,i] <- t[]; return(cat("Done\n"))})
+      mask <- as.ffdf(mask); # as.data.frame(as.ffdf(mask))
+      names(mask) <- paste0("variable.",1:20)
+      
+      prj <- predict(fit,mask,na.action=na.exclude) # na.pass
+      
+      prj_fn <- climData[[1]][[1]][[1]]
+      cell <- which(!is.na(prj_fn[]))
+      prj_fn[cell] <- prj
+      
+      
+    })
+    
+    
+    # 2. Testing
+    ## Ensemble process
+  } else {
+    cat(crop,"doesn't have sufficient information for analyze\n")
+  }
+  
+  return(cat("Done!\n"))
   
 }
 
