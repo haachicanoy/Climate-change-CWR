@@ -274,7 +274,7 @@ modelingStep <- function(crop)
     ## Cross-validation process
     
     # 1. Training
-    seeds <- c(1235,2358,3581,5819,8191)
+    #seeds <- c(1235,2358,3581,5819,8191)
     lapply(1:length(seeds),function(i)
     {
       set.seed(seeds[[i]]) # Vary seed
@@ -289,6 +289,9 @@ modelingStep <- function(crop)
       # Using features: linear, quadratic and product
       system.time(exp={fit <- dismo::maxent(x=climData[[1]][[1]],p=taxList[[1]][,c("lon","lat")],a=bckList[[1]][,c("lon","lat")],removeDuplicates=T,args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false"))})
       
+#       library('ENMeval')
+#       system.time(exp={fit <- ENMevaluate(occ=taxList[[1]][,c("lon","lat")],env=climData[[1]][[1]],method="jackknife",bg.coords=bckList[[1]][,c("lon","lat")],fc=c('L','Q','P','LQP'),kfolds=5,clamp=TRUE,overlap=FALSE)})
+
       # Vary for each cross-validation replicate. FALTA INCLUIR UN LOOP
       
       projections.cv <- lapply(1:5,function(k)
@@ -317,7 +320,7 @@ modelingStep <- function(crop)
         
         mask <- climData[[1]][[1]][[1]]
         mask <- ff(1,dim=c(ncell(mask),20),vmode="double")
-        lapply(1:20,function(i){z <- climData[[1]][[1]][[i]]; t <- getValues(z); mask[,i] <- t[]; return(cat("Done\n"))})
+        lapply(1:20,function(i){z <- climData[[1]][[1]][[i]]; t <- getValues(z); cat('Processing: biovariable',i,'\n'); mask[,i] <- t[]; return(cat("Done\n"))})
         mask <- as.ffdf(mask); # as.data.frame(as.ffdf(mask))
         names(mask) <- paste0("variable.",1:20)
         mask.test <- as.data.frame(mask)
@@ -347,6 +350,7 @@ modelingStep <- function(crop)
         lambdas.file$feature[q.feat] <- temp.name; rm(temp.name)
         quadratic.calcs <- lapply(lambdas.file$feature[q.feat],function(var)
         {
+          lambdas.file <- lambdas.file[q.feat,]
           eval(parse(text=paste('result.by.var.q <- lambdas.file$lambda[which(lambdas.file$feature==var)]*((mask.test[,',var,']^2-lambdas.file$min[which(lambdas.file$feature==var)])/(lambdas.file$max[which(lambdas.file$feature==var)]-lambdas.file$min[which(lambdas.file$feature==var)]))',sep='')))
           result.by.var.q <- data.frame(result.by.var.q)
           return(result.by.var.q)
@@ -381,9 +385,9 @@ modelingStep <- function(crop)
         
         # Alternativa 1
         prj_fn <- climData[[1]][[1]][[1]]
+        # prj_fn <- raster(climData[[1]][[1]][[1]],layer=1)
         cell <- 1:ncell(prj_fn)
         prj_fn[cell] <- L.x
-        plot(prj_fn)
         
         return(prj_fn)
         
