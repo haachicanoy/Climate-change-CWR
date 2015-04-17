@@ -271,31 +271,14 @@ modelingStep <- function(crop)
     loadRasters <- function(i){lapply(1:length(climData[[i]]),function(j){stack(lapply(1:20,function(k){raster(paste(climData[[i]][[j]]),band=k)}))})}
     climData <- mclapply(1:length(climData),loadRasters,mc.cores=5)
     
-    ## Cross-validation process
+    ## 1. Cross-validation process
     
-    # 1. Training
-    #seeds <- c(1235,2358,3581,5819,8191)
-    lapply(1:length(seeds),function(i)
+    # Run MaxEnt with complete dataset of occurrences cross-validating by 5 folds
+    # Using features: linear, quadratic and product
+    fit <- dismo::maxent(x=climData[[1]][[1]],p=taxList[[1]][,c("lon","lat")],a=bckList[[1]][,c("lon","lat")],removeDuplicates=T,args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false"))
+    make.projections <- function(k)
     {
-      set.seed(seeds[[i]]) # Vary seed
-      fold <- dismo::kfold(taxList[[1]],k=3) # Approximately 33% for testing set
-      occ_test <- taxList[[1]][fold==1,] # Testing set
-      bck_test <- bckList[[1]][fold==1,] # Testing set
-      occ_train <- taxList[[1]][fold!=1,] # Training set
-      bck_train <- bckList[[1]][fold!=1,] # Training set
-      
-      # fit <- dismo::maxent(x=climData[[1]][[1]],p=occ_train[,c("lon","lat")],removeDuplicates=T,args=c("nowarnings")) # Run MaxEnt with training dataset (randomtestpoints=30)
-      # Runing MaxEnt with complete dataset of occurrences cross-validating by 5 folds
-      # Using features: linear, quadratic and product
-      system.time(exp={fit <- dismo::maxent(x=climData[[1]][[1]],p=taxList[[1]][,c("lon","lat")],a=bckList[[1]][,c("lon","lat")],removeDuplicates=T,args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false"))})
-      
-#       library('ENMeval')
-#       system.time(exp={fit <- ENMevaluate(occ=taxList[[1]][,c("lon","lat")],env=climData[[1]][[1]],method="jackknife",bg.coords=bckList[[1]][,c("lon","lat")],fc=c('L','Q','P','LQP'),kfolds=5,clamp=TRUE,overlap=FALSE)})
-
-      # Vary for each cross-validation replicate. FALTA INCLUIR UN LOOP
-      
-      projections.cv <- lapply(1:5,function(k)
-      {
+        cat('\n\nProcessing fold:',k,'\n\n')
         lambdas.file <- strsplit(x=fit@models[[k]]@lambdas,split=',',fixed=TRUE)
         lambdas.file <- lapply(1:length(lambdas.file),function(i){z <- data.frame(t(lambdas.file[[i]])); return(z)})
         identify.lmd <- unlist(lapply(1:length(lambdas.file),function(i){z <- ncol(lambdas.file[[i]])==4; return(z)}))
@@ -318,13 +301,13 @@ modelingStep <- function(crop)
         p.feat <- grep(pattern="*",x=lambdas.file$feature,fixed=T) # Product features
         l.feat <- setdiff(1:nrow(lambdas.file),c(q.feat,p.feat)) # Linear features
         
-        mask <- climData[[1]][[1]][[1]]
-        mask <- ff(1,dim=c(ncell(mask),20),vmode="double")
-        lapply(1:20,function(i){z <- climData[[1]][[1]][[i]]; t <- getValues(z); cat('Processing: biovariable',i,'\n'); mask[,i] <- t[]; return(cat("Done\n"))})
-        mask <- as.ffdf(mask); # as.data.frame(as.ffdf(mask))
-        names(mask) <- paste0("variable.",1:20)
-        mask.test <- as.data.frame(mask)
-        mask.test <- data.table(mask.test)
+        temp.dt <- climData[[1]][[1]][[1]]
+        temp.dt <- ff(1,dim=c(ncell(temp.dt),20),vmode="double")
+        lapply(1:20,function(i){z <- climData[[1]][[1]][[i]]; t <- getValues(z); cat('Processing: biovariable',i,'\n'); temp.dt[,i] <- t[]; return(cat("Done\n"))})
+        temp.dt <- as.ffdf(temp.dt)
+        names(temp.dt) <- paste0("variable.",1:20)
+        temp.dt <- as.data.frame(temp.dt)
+        temp.dt <- data.table(temp.dt)
         
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
         # Linear features
@@ -332,14 +315,15 @@ modelingStep <- function(crop)
         
         linear.calcs <- lapply(lambdas.file$feature[l.feat],function(var)
         {
-          eval(parse(text=paste('result.by.var.l <- lambdas.file$lambda[which(lambdas.file$feature==var)]*((mask.test[,',var,']-lambdas.file$min[which(lambdas.file$feature==var)])/(lambdas.file$max[which(lambdas.file$feature==var)]-lambdas.file$min[which(lambdas.file$feature==var)]))',sep='')))
+          lambdas.file.l <- lambdas.file[l.feat,]
+          eval(parse(text=paste('result.by.var.l <- lambdas.file.l$lambda[which(lambdas.file.l$feature==var)]*((temp.dt[,',var,']-lambdas.file.l$min[which(lambdas.file.l$feature==var)])/(lambdas.file.l$max[which(lambdas.file.l$feature==var)]-lambdas.file.l$min[which(lambdas.file.l$feature==var)]))',sep='')))
           result.by.var.l <- data.frame(result.by.var.l)
           return(result.by.var.l)
         })
         linear.calcs <- Reduce(function(...) cbind(..., deparse.level=1), linear.calcs)
         names(linear.calcs) <- lambdas.file$feature[l.feat]
         linear.calcs <- as.data.table(linear.calcs)
-        linear.calcs <- linear.calcs[,rowSums(.SD,na.rm=FALSE)] # FALSE
+        linear.calcs <- linear.calcs[,rowSums(.SD,na.rm=FALSE)]
         
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
         # Quadratic features
@@ -350,15 +334,15 @@ modelingStep <- function(crop)
         lambdas.file$feature[q.feat] <- temp.name; rm(temp.name)
         quadratic.calcs <- lapply(lambdas.file$feature[q.feat],function(var)
         {
-          lambdas.file <- lambdas.file[q.feat,]
-          eval(parse(text=paste('result.by.var.q <- lambdas.file$lambda[which(lambdas.file$feature==var)]*((mask.test[,',var,']^2-lambdas.file$min[which(lambdas.file$feature==var)])/(lambdas.file$max[which(lambdas.file$feature==var)]-lambdas.file$min[which(lambdas.file$feature==var)]))',sep='')))
+          lambdas.file.q <- lambdas.file[q.feat,]
+          eval(parse(text=paste('result.by.var.q <- lambdas.file.q$lambda[which(lambdas.file.q$feature==var)]*((temp.dt[,',var,']^2-lambdas.file.q$min[which(lambdas.file.q$feature==var)])/(lambdas.file.q$max[which(lambdas.file.q$feature==var)]-lambdas.file.q$min[which(lambdas.file.q$feature==var)]))',sep='')))
           result.by.var.q <- data.frame(result.by.var.q)
           return(result.by.var.q)
         })
         quadratic.calcs <- Reduce(function(...) cbind(..., deparse.level=1), quadratic.calcs)
         names(quadratic.calcs) <- lambdas.file$feature[q.feat]
         quadratic.calcs <- as.data.table(quadratic.calcs)
-        quadratic.calcs <- quadratic.calcs[,rowSums(.SD,na.rm=FALSE)] # FALSE
+        quadratic.calcs <- quadratic.calcs[,rowSums(.SD,na.rm=FALSE)]
         
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
         # Product features
@@ -366,63 +350,44 @@ modelingStep <- function(crop)
         
         product.calcs <- lapply(lambdas.file$feature[p.feat],function(comb.var)
         {
-          eval(parse(text=paste('result.by.var.p <- lambdas.file$lambda[which(lambdas.file$feature==comb.var)]*((mask.test[,',comb.var,']-lambdas.file$min[which(lambdas.file$feature==comb.var)])/(lambdas.file$max[which(lambdas.file$feature==comb.var)]-lambdas.file$min[which(lambdas.file$feature==comb.var)]))',sep='')))
+          lambdas.file.p <- lambdas.file[p.feat,]
+          eval(parse(text=paste('result.by.var.p <- lambdas.file.p$lambda[which(lambdas.file.p$feature==comb.var)]*((temp.dt[,',comb.var,']-lambdas.file.p$min[which(lambdas.file.p$feature==comb.var)])/(lambdas.file.p$max[which(lambdas.file.p$feature==comb.var)]-lambdas.file.p$min[which(lambdas.file.p$feature==comb.var)]))',sep='')))
           result.by.var.p <- data.frame(result.by.var.p)
           return(result.by.var.p)
         })
         product.calcs <- Reduce(function(...) cbind(..., deparse.level=1), product.calcs)
         names(product.calcs) <- lambdas.file$feature[p.feat]
         product.calcs <- as.data.table(product.calcs)
-        product.calcs <- product.calcs[,rowSums(.SD,na.rm=FALSE)] # FALSE
+        product.calcs <- product.calcs[,rowSums(.SD,na.rm=FALSE)]
         
         fx.calcs <- cbind(linear.calcs,quadratic.calcs,product.calcs); rm(linear.calcs,quadratic.calcs,product.calcs)
         fx.calcs <- as.data.table(fx.calcs)
-        fx.calcs <- fx.calcs[,rowSums(.SD,na.rm=FALSE)] # FALSE
+        fx.calcs <- fx.calcs[,rowSums(.SD,na.rm=FALSE)]
         
         S.x <- fx.calcs - paramet.file$value[which(paramet.file$variable=="linearPredictorNormalizer")]
         Q.x <- exp(S.x)/paramet.file$value[which(paramet.file$variable=="densityNormalizer")]
         L.x <- (Q.x*exp(paramet.file$value[which(paramet.file$variable=="entropy")]))/(1+Q.x*exp(paramet.file$value[which(paramet.file$variable=="entropy")]))
         
-        # Alternativa 1
         prj_fn <- climData[[1]][[1]][[1]]
-        # prj_fn <- raster(climData[[1]][[1]][[1]],layer=1)
         cell <- 1:ncell(prj_fn)
         prj_fn[cell] <- L.x
         
         return(prj_fn)
         
-      })
-      
-      # Alternativa 2
-      # coords <- xyFromCell(climData[[1]][[1]][[1]],1:ncell(climData[[1]][[1]][[1]]))
-      # rasterize(x=coords,y=climData[[1]][[1]][[1]],field=L.x,fun='last')
-      
-      evl <- evaluate(fit,p=occ_test[,c("lon","lat")],a=bckList[[1]][,c("lon","lat")],x=climData[[1]][[1]])
-      evl@auc
-      
-      
-      
-      
-      
-      prj <- predict(fit,mask,na.action=na.exclude) # na.pass
-      
-      prj_fn <- climData[[1]][[1]][[1]]
-      cell <- which(!is.na(prj_fn[]))
-      prj_fn[cell] <- prj
-      
-      r <- predict(fit,climData[[1]][[1]])
-      
-    })
+      }
+    cross.val.prj <- lapply(1:5,make.projections)
+    cross.val.prj <- stack(cross.val.prj)
     
+    ## 2. Testing
+    dim(fit@results)
+    # Seleccionar: Gain, Training.AUC, Test.AUC, AUC.Standard.Deviation, contribution by variable
     
-    # 2. Testing
-    ## Ensemble process
+    ## 3. Ensemble process
+    
   } else {
     cat(crop,"doesn't have sufficient information for analyze\n")
   }
-  
   return(cat("Done!\n"))
-  
 }
 
 compareCurFut <- function(crop)
