@@ -55,38 +55,70 @@ make.projections <- function(k)
   # Quadratic features
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
   
-  temp.name <- strsplit(x=lambdas.file$feature[q.feat],split="^",fixed=TRUE)
-  temp.name <- unlist(lapply(temp.name,function(set){return(set[1])}))
-  lambdas.file$feature[q.feat] <- temp.name; rm(temp.name)
-  quadratic.calcs <- lapply(lambdas.file$feature[q.feat],function(var)
+  # Verify if quadratic features exists
+  if(length(q.feat)>0)
   {
-    lambdas.file.q <- lambdas.file[q.feat,]
-    eval(parse(text=paste('result.by.var.q <- lambdas.file.q$lambda[which(lambdas.file.q$feature==var)]*((temp.dt[,',var,']^2-lambdas.file.q$min[which(lambdas.file.q$feature==var)])/(lambdas.file.q$max[which(lambdas.file.q$feature==var)]-lambdas.file.q$min[which(lambdas.file.q$feature==var)]))',sep='')))
-    result.by.var.q <- data.frame(result.by.var.q)
-    return(result.by.var.q)
-  })
-  quadratic.calcs <- Reduce(function(...) cbind(..., deparse.level=1), quadratic.calcs)
-  names(quadratic.calcs) <- lambdas.file$feature[q.feat]
-  quadratic.calcs <- as.data.table(quadratic.calcs)
-  quadratic.calcs <- quadratic.calcs[,rowSums(.SD,na.rm=FALSE)]
+    temp.name <- strsplit(x=lambdas.file$feature[q.feat],split="^",fixed=TRUE)
+    temp.name <- unlist(lapply(temp.name,function(set){return(set[1])}))
+    lambdas.file$feature[q.feat] <- temp.name; rm(temp.name)
+    quadratic.calcs <- lapply(lambdas.file$feature[q.feat],function(var)
+    {
+      lambdas.file.q <- lambdas.file[q.feat,]
+      eval(parse(text=paste('result.by.var.q <- lambdas.file.q$lambda[which(lambdas.file.q$feature==var)]*((temp.dt[,',var,']^2-lambdas.file.q$min[which(lambdas.file.q$feature==var)])/(lambdas.file.q$max[which(lambdas.file.q$feature==var)]-lambdas.file.q$min[which(lambdas.file.q$feature==var)]))',sep='')))
+      result.by.var.q <- data.frame(result.by.var.q)
+      return(result.by.var.q)
+    })
+    quadratic.calcs <- Reduce(function(...) cbind(..., deparse.level=1), quadratic.calcs)
+    names(quadratic.calcs) <- lambdas.file$feature[q.feat]
+    quadratic.calcs <- as.data.table(quadratic.calcs)
+    quadratic.calcs <- quadratic.calcs[,rowSums(.SD,na.rm=FALSE)]
+  } else {
+    cat('Quadratic features does not exist.\n')
+  }
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
   # Product features
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
   
-  product.calcs <- lapply(lambdas.file$feature[p.feat],function(comb.var)
+  # Verify if product features exists
+  if(length(p.feat)>0)
   {
-    lambdas.file.p <- lambdas.file[p.feat,]
-    eval(parse(text=paste('result.by.var.p <- lambdas.file.p$lambda[which(lambdas.file.p$feature==comb.var)]*((temp.dt[,',comb.var,']-lambdas.file.p$min[which(lambdas.file.p$feature==comb.var)])/(lambdas.file.p$max[which(lambdas.file.p$feature==comb.var)]-lambdas.file.p$min[which(lambdas.file.p$feature==comb.var)]))',sep='')))
-    result.by.var.p <- data.frame(result.by.var.p)
-    return(result.by.var.p)
-  })
-  product.calcs <- Reduce(function(...) cbind(..., deparse.level=1), product.calcs)
-  names(product.calcs) <- lambdas.file$feature[p.feat]
-  product.calcs <- as.data.table(product.calcs)
-  product.calcs <- product.calcs[,rowSums(.SD,na.rm=FALSE)]
+    product.calcs <- lapply(lambdas.file$feature[p.feat],function(comb.var)
+    {
+      lambdas.file.p <- lambdas.file[p.feat,]
+      eval(parse(text=paste('result.by.var.p <- lambdas.file.p$lambda[which(lambdas.file.p$feature==comb.var)]*((temp.dt[,',comb.var,']-lambdas.file.p$min[which(lambdas.file.p$feature==comb.var)])/(lambdas.file.p$max[which(lambdas.file.p$feature==comb.var)]-lambdas.file.p$min[which(lambdas.file.p$feature==comb.var)]))',sep='')))
+      result.by.var.p <- data.frame(result.by.var.p)
+      return(result.by.var.p)
+    })
+    product.calcs <- Reduce(function(...) cbind(..., deparse.level=1), product.calcs)
+    names(product.calcs) <- lambdas.file$feature[p.feat]
+    product.calcs <- as.data.table(product.calcs)
+    product.calcs <- product.calcs[,rowSums(.SD,na.rm=FALSE)]
+  } else {
+    cat('Product features does not exist.\n')
+  }
   
-  fx.calcs <- cbind(linear.calcs,quadratic.calcs,product.calcs); rm(linear.calcs,quadratic.calcs,product.calcs)
+  if(exists('linear.calcs') & exists('quadratic.calcs') & exists('product.calcs')) # Linear, quadratic and product
+  {
+    fx.calcs <- cbind(linear.calcs,quadratic.calcs,product.calcs); rm(linear.calcs,quadratic.calcs,product.calcs)
+  } else {
+    if(exists('linear.calcs') & exists('quadratic.calcs') & !exists('product.calcs')) # Linear and quadratic
+    {
+      fx.calcs <- cbind(linear.calcs,quadratic.calcs); rm(linear.calcs,quadratic.calcs)
+    } else {
+      if(exists('linear.calcs') & !exists('quadratic.calcs') & exists('product.calcs')) # Linear and product
+      {
+        fx.calcs <- cbind(linear.calcs,product.calcs); rm(linear.calcs,product.calcs)
+      } else {
+        if(exists('linear.calcs') & !exists('quadratic.calcs') & !exists('product.calcs')) # Linear only
+        {
+          fx.calcs <- cbind(linear.calcs); rm(linear.calcs)
+        }
+      }
+    }
+  }
+  
+  # fx.calcs <- cbind(linear.calcs,quadratic.calcs,product.calcs); rm(linear.calcs,quadratic.calcs,product.calcs)
   fx.calcs <- as.data.table(fx.calcs)
   fx.calcs <- fx.calcs[,rowSums(.SD,na.rm=FALSE)]
   
