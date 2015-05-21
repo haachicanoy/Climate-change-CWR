@@ -92,4 +92,35 @@ In addition: Warning messages:
 2: In max(rs) : no non-missing arguments to max; returning -Inf
 3: In min(rs) : no non-missing arguments to min; returning Inf
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+# Etapa de modelación
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 
+Comparación de tiempos de procesamiento
+
+# Modelación
+# Crop = 'avena', Taxon = 'Avena_abyssinica', GCM=1; Apróximadamente 40 segundos
+
+# Proyección con predict function
+      #    user  system elapsed
+      # 425.976   2.470 398.787
+
+# Proyección con make.projections function
+      #   user  system elapsed
+      # 83.118   3.869  87.053
+
+DESCRIPCIÓN DE LA FUNCIÓN PARA MODELAR
+
+Input: crop
+
+Internamente se modela cada uno de los taxones asociados al crop. Para hacer esto necesitamos un loop o
+paralelizar la función que realiza este paso.
+
+Por taxón se realizarán 5 corridas mediante el procedimiento de validación cruzada. Las estadísticas de
+cada corrida se deben almacenar en una tabla que debería contener:
+
+Regularized.training.gain: ganancia
+Training.AUC: AUC para los datos con los que se entrenó el modelo
+Test.AUC: AUC para los datos con los que se evaluó el modelo
+AUC.Standard.Deviation: desviación estándar de los AUC de entrenamiento
+Threshold: Esquina superior izquierda de la curva ROC

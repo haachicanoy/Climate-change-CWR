@@ -112,24 +112,33 @@ make.projections <- function(k)
       } else {
         if(exists('linear.calcs') & !exists('quadratic.calcs') & !exists('product.calcs')) # Linear only
         {
-          fx.calcs <- cbind(linear.calcs); rm(linear.calcs)
+          cat('Projections do not available because model ran with linear features only.\n')
         }
       }
     }
   }
   
-  # fx.calcs <- cbind(linear.calcs,quadratic.calcs,product.calcs); rm(linear.calcs,quadratic.calcs,product.calcs)
-  fx.calcs <- as.data.table(fx.calcs)
-  fx.calcs <- fx.calcs[,rowSums(.SD,na.rm=FALSE)]
-  
-  S.x <- fx.calcs - paramet.file$value[which(paramet.file$variable=="linearPredictorNormalizer")]
-  Q.x <- exp(S.x)/paramet.file$value[which(paramet.file$variable=="densityNormalizer")]
-  L.x <- (Q.x*exp(paramet.file$value[which(paramet.file$variable=="entropy")]))/(1+Q.x*exp(paramet.file$value[which(paramet.file$variable=="entropy")]))
-  
-  prj_fn <- climData[[1]][[1]][[1]]
-  cell <- 1:ncell(prj_fn)
-  prj_fn[cell] <- L.x
-  
-  return(prj_fn)
+  if(exists('fx.calcs')) # Verify if fx.calcs exists in order to calculate projections
+  {
+    
+    fx.calcs <- as.data.table(fx.calcs)
+    fx.calcs <- fx.calcs[,rowSums(.SD,na.rm=FALSE)]
+    
+    S.x <- fx.calcs - paramet.file$value[which(paramet.file$variable=="linearPredictorNormalizer")]
+    Q.x <- exp(S.x)/paramet.file$value[which(paramet.file$variable=="densityNormalizer")]
+    L.x <- (Q.x*exp(paramet.file$value[which(paramet.file$variable=="entropy")]))/(1+Q.x*exp(paramet.file$value[which(paramet.file$variable=="entropy")]))
+    
+    # First index corresponds to taxon information, Second index corresponds to climatic information model
+    prj_fn <- climData[[1]][[1]][[1]]
+    cell <- 1:ncell(prj_fn)
+    prj_fn[cell] <- L.x
+    
+    return(prj_fn)
+    
+  } else {
+    
+    return(cat('Process finished for inaccurate results.\n'))
+    
+  }
   
 }

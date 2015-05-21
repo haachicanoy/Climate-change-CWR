@@ -279,7 +279,8 @@ modelingStep <- function(crop)
     # Run MaxEnt with complete dataset of occurrences cross-validating by 5 folds
     # Using features: linear, quadratic and product
     # First index corresponds to taxon information, Second index corresponds to climatic information model
-    fit <- dismo::maxent(x=climData[[7]][[4]],p=taxList[[7]][,c("lon","lat")],a=bckList[[7]][,c("lon","lat")],removeDuplicates=T,args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false"))
+    fit <- dismo::maxent(x=climData[[1]][[4]],p=taxList[[1]][,c("lon","lat")],a=bckList[[1]][,c("lon","lat")],removeDuplicates=T,args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false"))
+    # fit <- dismo::maxent(x=climData[[7]][[4]],p=taxList[[7]][,c("lon","lat")],a=bckList[[7]][,c("lon","lat")],removeDuplicates=T,args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false"))
     source(paste(src.dir,'/do_projections.R',sep=''))
     cross.val.prj <- lapply(1:5,make.projections)
     cross.val.prj <- stack(cross.val.prj)
