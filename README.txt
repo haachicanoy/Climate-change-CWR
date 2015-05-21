@@ -136,3 +136,21 @@ Adicional a esto, se podría crear un archivo de texto donde contemos con la inf
 - Número de presencias por taxón
 - Verificar las features con los cuales se corrió el modelo
 - ... (no se me ocurre nada más por el momento)
+
+A partir de las 5 replicas realizadas por taxón, se calcula el promedio, el cual se umbraliza a partir
+del threshold seleccionado (debe almacenarse), esto por cada uno de los 30 GCM's. Con estos 30 rasters
+umbralizados calculamos el modelo ensamble a partir de la función de quantiles.
+
+Archivos a almacenar en la carpeta: /curie_data/storage/climate_change/[crop]/maxent_modeling
+
+- Tabla con estadísticas de resumen para el cultivo
+- Archivo de texto con información de interés sobre las corridas del modelo
+
+Archivos a almacenar en la carpeta: /curie_data/storage/climate_change/[crop]/maxent_modeling/[specie_name]
+
+- [specie_name]_current.nc : contiene la distribución potencial umbralizada de la especie considerada en condiciones
+actuales
+- [specie_name]_future.nc  : contiene la distribución potencial umbralizada de la especie considerada en condiciones
+futuras para cada uno de los 30 GCM's
+- [specie_name]_ensemble.nc: contiene la distribución potencial umbralizada de la especie considerada en condiciones
+futuras calculada mediante un procedimiento ensamble

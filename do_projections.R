@@ -2,7 +2,7 @@
 # H. Achicanoy
 # CIAT, 2015
 
-make.projections <- function(k)
+make.projections <- function(k,taxon)
 {
   cat('\n\nProcessing fold:',k,'\n\n')
   lambdas.file <- strsplit(x=fit@models[[k]]@lambdas,split=',',fixed=TRUE)
@@ -129,7 +129,7 @@ make.projections <- function(k)
     L.x <- (Q.x*exp(paramet.file$value[which(paramet.file$variable=="entropy")]))/(1+Q.x*exp(paramet.file$value[which(paramet.file$variable=="entropy")]))
     
     # First index corresponds to taxon information, Second index corresponds to climatic information model
-    prj_fn <- climData[[1]][[1]][[1]]
+    prj_fn <- climData[[taxon]][[1]][[1]]
     cell <- 1:ncell(prj_fn)
     prj_fn[cell] <- L.x
     

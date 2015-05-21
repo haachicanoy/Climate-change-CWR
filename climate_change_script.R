@@ -278,21 +278,48 @@ modelingStep <- function(crop)
     
     # Run MaxEnt with complete dataset of occurrences cross-validating by 5 folds
     # Using features: linear, quadratic and product
-    # First index corresponds to taxon information, Second index corresponds to climatic information model
-    fit <- dismo::maxent(x=climData[[1]][[4]],p=taxList[[1]][,c("lon","lat")],a=bckList[[1]][,c("lon","lat")],removeDuplicates=T,args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false"))
-    # fit <- dismo::maxent(x=climData[[7]][[4]],p=taxList[[7]][,c("lon","lat")],a=bckList[[7]][,c("lon","lat")],removeDuplicates=T,args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false"))
-    source(paste(src.dir,'/do_projections.R',sep=''))
-    cross.val.prj <- lapply(1:5,make.projections)
-    cross.val.prj <- stack(cross.val.prj)
+    # First index corresponds to taxon information, Second index corresponds to climatic information model [10 is current]
     
-    ## 2. Testing
-    metrics <- as.data.frame(fit@results)
-    metrics$Metric <- rownames(metrics); rownames(metrics) <- 1:nrow(metrics)
-    colnames(metrics) <- c(paste('Fold_',1:5,sep=''),'Fold_mean','Metric')
-    metrics <- metrics[,c('Metric',paste('Fold_',1:5,sep=''),'Fold_mean')]
-    # FALTA: 1. Calcular e incluir -> UpperLeftROC threshold
-    metrics <- metrics[complete.cases(match(metrics$Metric,c('Regularized.training.gain','Training.AUC','Test.AUC','AUC.Standard.Deviation'))),]
-    # FALTA: 2. Guardar resultados, mapas y metricos
+    modelingProcess <- function(taxon)
+    {
+      cat('**** Processing:'spName[taxon],'****\n')
+      lapply(1:31, function(gcm)
+      {
+        cat('Cross-validating process\n')
+        # gcm == 10: current
+        # For test: taxon=1, gcm=4
+        # INCLUIR TRYCATCH
+        fit <- dismo::maxent(x=climData[[taxon]][[gcm]],p=taxList[[taxon]][,c("lon","lat")],a=bckList[[taxon]][,c("lon","lat")],removeDuplicates=T,args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false"))
+        
+        if(exists('fit'))
+        {
+          # Projecting
+          source(paste(src.dir,'/do_projections.R',sep=''))
+          cross.val.prj <- lapply(1:5,make.projections,taxon)
+          
+          if(exists('cross.val.prj'))
+          {
+            cross.val.prj <- stack(cross.val.prj)
+            # Summary statistics
+            metrics <- as.data.frame(fit@results)
+            metrics$Metric <- rownames(metrics); rownames(metrics) <- 1:nrow(metrics)
+            colnames(metrics) <- c(paste('Fold_',1:5,sep=''),'Fold_mean','Metric')
+            metrics <- metrics[,c('Metric',paste('Fold_',1:5,sep=''),'Fold_mean')]
+            # FALTA: 1. Calcular e incluir -> UpperLeftROC threshold
+            metrics <- metrics[complete.cases(match(metrics$Metric,c('Regularized.training.gain','Training.AUC','Test.AUC','AUC.Standard.Deviation'))),]
+            # FALTA: 2. Guardar resultados, mapas y metricos
+          }
+          
+        } else {
+          cat('This run had ... \n')
+        }
+      })
+      
+      return(cat('Done.\n'))
+    }
+    
+    mclapply(1:length(taxList),modelingProcess,mc.cores=5)
+    
     
     ## 3. Ensemble process
     
