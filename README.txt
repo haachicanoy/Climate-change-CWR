@@ -114,13 +114,25 @@ DESCRIPCIÓN DE LA FUNCIÓN PARA MODELAR
 Input: crop
 
 Internamente se modela cada uno de los taxones asociados al crop. Para hacer esto necesitamos un loop o
-paralelizar la función que realiza este paso.
+paralelizar la función que realiza este paso. (PARA HACER)
 
 Por taxón se realizarán 5 corridas mediante el procedimiento de validación cruzada. Las estadísticas de
 cada corrida se deben almacenar en una tabla que debería contener:
 
-Regularized.training.gain: ganancia
-Training.AUC: AUC para los datos con los que se entrenó el modelo
-Test.AUC: AUC para los datos con los que se evaluó el modelo
-AUC.Standard.Deviation: desviación estándar de los AUC de entrenamiento
-Threshold: Esquina superior izquierda de la curva ROC
+- Regularized.training.gain: ganancia
+- Training.AUC: AUC para los datos con los que se entrenó el modelo
+- Test.AUC: AUC para los datos con los que se evaluó el modelo
+- AUC.Standard.Deviation: desviación estándar de los AUC de entrenamiento
+- Threshold: Esquina superior izquierda de la curva ROC
+
+Falta calcular:
+
+- Threshold (PARA HACER)
+
+Se debe almacenar las estadísticas de todos los taxones en una tabla para obtener un resumen del cultivo.
+(PARA HACER)
+Adicional a esto, se podría crear un archivo de texto donde contemos con la información de: (PARA HACER)
+
+- Número de presencias por taxón
+- Verificar las features con los cuales se corrió el modelo
+- ... (no se me ocurre nada más por el momento)
