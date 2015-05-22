@@ -239,6 +239,7 @@ mclapply(1:length(crops),backGenFunc,mc.cores=20)
 # Step 5. Almacenar los resultados por cultivo, especie, modelo en formato .nc
 
 crops <- list.dirs("/curie_data/storage/climate_change",full.names=F,recursive=F) # Crops to analyse
+crop <- crops[1]
 
 options(warn=-1)
 if(!require(ff)){install.packages("ff"); library(ff)} else {library(ff)}
@@ -282,14 +283,24 @@ modelingStep <- function(crop)
     
     modelingProcess <- function(taxon)
     {
-      cat('**** Processing:'spName[taxon],'****\n')
+      cat('**** Processing:',spName[taxon],'****\n')
       lapply(1:31, function(gcm)
       {
         cat('Cross-validating process\n')
         # gcm == 10: current
         # For test: taxon=1, gcm=4
         # INCLUIR TRYCATCH
-        fit <- dismo::maxent(x=climData[[taxon]][[gcm]],p=taxList[[taxon]][,c("lon","lat")],a=bckList[[taxon]][,c("lon","lat")],removeDuplicates=T,args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false"))
+        tryCatch(expr={
+          fit <- dismo::maxent(x=climData[[taxon]][[gcm]],
+                               p=taxList[[taxon]][,c("lon","lat")],
+                               a=bckList[[taxon]][,c("lon","lat")],removeDuplicates=T,
+                               args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false","pictures=false","plots=false"),
+                               path='/curie_data/storage/climate_change/avena/Test')
+        },
+        error=function(e){
+          
+        })
+        
         
         if(exists('fit'))
         {
