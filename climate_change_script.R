@@ -283,27 +283,45 @@ modelingStep <- function(crop)
     
     modelingProcess <- function(taxon)
     {
-      cat('**** Processing:',spName[taxon],'****\n')
+      cat('**** Processing:',spName[taxon],'****\n\n')
+      
+      cat('Creating directories\n')
+      modelDir <- paste('/curie_data/storage/climate_change/',crop,'/maxent_modeling',sep='')
+      if(!file.exists(modelDir)){dir.create(modelDir)} else {cat('Modeling folder exists\n')}
+      taxonDir <- paste(modelDir,'/',spName[taxon],sep='')
+      if(!file.exists(taxonDir)){dir.create(taxonDir)} else {cat('Taxon folder exists\n')}
+      crossValDir <- paste(taxonDir,'/crossval',sep='')
+      if(!file.exists(crossValDir)){dir.create(crossValDir)} else {cat('Cross-validation folder exists\n')}
+      metricsDir <- paste(taxonDir,'/metrics',sep='')
+      if(!file.exists(metricsDir)){dir.create(metricsDir)} else {cat('Metrics folder exists\n')}
+      projDir <- paste(taxonDir,'/projections',sep='')
+      if(!file.exists(projDir)){dir.create(projDir)} else {cat('Projections folder exists\n')}
+      
+      cat('Cross-validating process by GCM\n')
+      gcmList <- list.files('/curie_data/storage/future_clm_cimp5',full.names=FALSE,recursive=FALSE)
       lapply(1:31, function(gcm)
       {
-        cat('Cross-validating process\n')
+        cat('Running model for:',gcmList[gcm],'\n')
         # gcm == 10: current
-        # For test: taxon=1, gcm=4
-        # INCLUIR TRYCATCH
+        # For test: taxon=1; gcm=4
         tryCatch(expr={
           fit <- dismo::maxent(x=climData[[taxon]][[gcm]],
                                p=taxList[[taxon]][,c("lon","lat")],
                                a=bckList[[taxon]][,c("lon","lat")],removeDuplicates=T,
                                args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false","pictures=false","plots=false"),
-                               path='/curie_data/storage/climate_change/avena/Test')
+                               path=crossValDir)
         },
         error=function(e){
-          
+          cat("Modeling process failed:",spName[taxon],"\n")
+          return("Done\n")
         })
-        
         
         if(exists('fit'))
         {
+          # Keep files for threshold calculation
+          setwd(crossValDir)
+          system(paste('find . ! -name "species_[0-9].csv" ! -name "maxentResults.csv" ! -name "*_omission.csv" ! -name "*_samplePredictions.csv" -type f -delete',sep=''))
+          
           # Projecting
           source(paste(src.dir,'/do_projections.R',sep=''))
           cross.val.prj <- lapply(1:5,make.projections,taxon)
@@ -316,7 +334,7 @@ modelingStep <- function(crop)
             metrics$Metric <- rownames(metrics); rownames(metrics) <- 1:nrow(metrics)
             colnames(metrics) <- c(paste('Fold_',1:5,sep=''),'Fold_mean','Metric')
             metrics <- metrics[,c('Metric',paste('Fold_',1:5,sep=''),'Fold_mean')]
-            # FALTA: 1. Calcular e incluir -> UpperLeftROC threshold
+            source(paste(src.dir,'/getMetrics.R',sep=''))
             metrics <- metrics[complete.cases(match(metrics$Metric,c('Regularized.training.gain','Training.AUC','Test.AUC','AUC.Standard.Deviation'))),]
             # FALTA: 2. Guardar resultados, mapas y metricos
           }
