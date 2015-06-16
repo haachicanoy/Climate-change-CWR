@@ -329,13 +329,13 @@ modelingStep <- function(crop)
           if(exists('cross.val.prj'))
           {
             cross.val.prj <- stack(cross.val.prj)
+            mean.prj      <- mean(cross.val.prj)
             # Summary statistics
-            metrics <- as.data.frame(fit@results)
-            metrics$Metric <- rownames(metrics); rownames(metrics) <- 1:nrow(metrics)
-            colnames(metrics) <- c(paste('Fold_',1:5,sep=''),'Fold_mean','Metric')
-            metrics <- metrics[,c('Metric',paste('Fold_',1:5,sep=''),'Fold_mean')]
             source(paste(src.dir,'/getMetrics.R',sep=''))
             metrics <- metrics[complete.cases(match(metrics$Metric,c('Regularized.training.gain','Training.AUC','Test.AUC','AUC.Standard.Deviation'))),]
+            # Threshold file
+            threshFile <- read.csv(paste(metricsDir,'/thresholds.csv',sep=''))
+            
             # FALTA: 2. Guardar resultados, mapas y metricos
           }
           

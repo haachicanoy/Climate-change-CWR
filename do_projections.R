@@ -27,9 +27,9 @@ make.projections <- function(k,taxon)
   p.feat <- grep(pattern="*",x=lambdas.file$feature,fixed=T) # Product features
   l.feat <- setdiff(1:nrow(lambdas.file),c(q.feat,p.feat)) # Linear features
   
-  temp.dt <- climData[[1]][[1]][[1]]
+  temp.dt <- climData[[taxon]][[1]][[1]]
   temp.dt <- ff(1,dim=c(ncell(temp.dt),20),vmode="double")
-  lapply(1:20,function(i){z <- climData[[1]][[1]][[i]]; t <- getValues(z); cat('Processing: biovariable',i,'\n'); temp.dt[,i] <- t[]; return(cat("Done\n"))})
+  lapply(1:20,function(i){z <- climData[[taxon]][[1]][[i]]; t <- getValues(z); cat('Processing: biovariable',i,'\n'); temp.dt[,i] <- t[]; return(cat("Done\n"))})
   temp.dt <- as.ffdf(temp.dt)
   names(temp.dt) <- paste0("variable.",1:20)
   temp.dt <- as.data.frame(temp.dt)
