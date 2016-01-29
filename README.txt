@@ -154,3 +154,21 @@ actuales
 futuras para cada uno de los 30 GCM's
 - [specie_name]_ensemble.nc: contiene la distribución potencial umbralizada de la especie considerada en condiciones
 futuras calculada mediante un procedimiento ensamble
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+# Etapa de modelación incorporando nuevas ideas
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= #
+@ Optimización de background
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= #
+
+@@ Tener en consideración el artículo de Syfert et al (2013) e implementar la corrección por sampling bias
+@@ en el código por cada especie
+
+Tres escenarios en consideración
+1. Polinomial: en base a ocurrencias extremas
+2. Rectangular: en base a ocurrencias extremas a partir de los vertices
+3. Modelación previa: utilizar un modelo de envelopment, BIOCLIM ...
+
+Por cada escenario se tienen dos buffer para probar la bondad de ajuste del modelo por corrección de muestreo
