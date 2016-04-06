@@ -62,7 +62,7 @@ make.projections <- function(k,taxon)
     linear.calcs <- as.data.table(linear.calcs)
     linear.calcs <- linear.calcs[,rowSums(.SD,na.rm=FALSE)]
   } else {
-    cat('Linear features does not exist.\n')
+    cat('Linear features do not exist.\n')
   }
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -87,7 +87,7 @@ make.projections <- function(k,taxon)
     quadratic.calcs <- as.data.table(quadratic.calcs)
     quadratic.calcs <- quadratic.calcs[,rowSums(.SD,na.rm=FALSE)]
   } else {
-    cat('Quadratic features does not exist.\n')
+    cat('Quadratic features do not exist.\n')
   }
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -109,7 +109,7 @@ make.projections <- function(k,taxon)
     product.calcs <- as.data.table(product.calcs)
     product.calcs <- product.calcs[,rowSums(.SD,na.rm=FALSE)]
   } else {
-    cat('Product features does not exist.\n')
+    cat('Product features do not exist.\n')
   }
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -118,29 +118,74 @@ make.projections <- function(k,taxon)
   
   if(length(f.feat)>0)
   {
-    forward.calcs <- lapply(lambdas.file$feature[f.feat], function(var)
+    forward.index <- lambdas.file$feature[f.feat]
+    forward.index.c <- gsub(pattern="'", replacement="", forward.index)
+    forward.calcs <- lapply(1:length(forward.index), function(i)
     {
       lambdas.file.f <- lambdas.file[f.feat,]
-      eval(parse(text=paste('result.by.var.p <- lambdas.file.p$lambda[which(lambdas.file.p$feature==comb.var)]*((temp.dt[,',comb.var,']-lambdas.file.p$min[which(lambdas.file.p$feature==comb.var)])/(lambdas.file.p$max[which(lambdas.file.p$feature==comb.var)]-lambdas.file.p$min[which(lambdas.file.p$feature==comb.var)]))',sep='')))
-      result.by.var.p <- data.frame(result.by.var.p)
-      return(result.by.var.p)
+      eval(parse(text=paste('result.by.var.f <- ifelse(test=temp.dt[,',forward.index.c[i],']<lambdas.file.f$min[i], yes=0, no=lambdas.file.f$lambda[i]*(temp.dt[,',forward.index.c[i],']-lambdas.file.f$min[i])/(lambdas.file.f$max[i]-lambdas.file.f$min[i]))',sep='')))
+      result.by.var.f <- data.frame(result.by.var.f)
+      return(result.by.var.f)
     })
-    product.calcs <- Reduce(function(...) cbind(..., deparse.level=1), product.calcs)
-    names(product.calcs) <- lambdas.file$feature[p.feat]
-    product.calcs <- as.data.table(product.calcs)
-    product.calcs <- product.calcs[,rowSums(.SD,na.rm=FALSE)]
+    forward.calcs <- Reduce(function(...) cbind(..., deparse.level=1), forward.calcs)
+    names(forward.calcs) <- lambdas.file$feature[f.feat]
+    forward.calcs <- as.data.table(forward.calcs)
+    forward.calcs <- forward.calcs[,rowSums(.SD,na.rm=FALSE)]
   } else {
-    cat('Product features does not exist.\n')
+    cat('Forward hinge features do not exist.\n')
   }
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
   # Reverse hinge features
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
   
+  if(length(r.feat)>0)
+  {
+    reverse.index <- lambdas.file$feature[r.feat]
+    reverse.index.c <- gsub(pattern="`", replacement="", reverse.index)
+    reverse.calcs <- lapply(1:length(reverse.index), function(i)
+    {
+      lambdas.file.r <- lambdas.file[r.feat,]
+      eval(parse(text=paste('result.by.var.r <- ifelse(test=temp.dt[,',reverse.index.c[i],']<lambdas.file.r$max[i], yes=lambdas.file.r$lambda[i]*(lambdas.file.r$max[i] - temp.dt[,',reverse.index.c[i],'])/(lambdas.file.r$max[i]-lambdas.file.r$min[i]), no=0)',sep='')))
+      result.by.var.r <- data.frame(result.by.var.r)
+      return(result.by.var.r)
+    })
+    reverse.calcs <- Reduce(function(...) cbind(..., deparse.level=1), reverse.calcs)
+    names(reverse.calcs) <- lambdas.file$feature[r.feat]
+    reverse.calcs <- as.data.table(reverse.calcs)
+    reverse.calcs <- reverse.calcs[,rowSums(.SD,na.rm=FALSE)]
+  } else {
+    cat('Reverse hinge features do not exist.\n')
+  }
+  
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
   # Threshold features
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
   
+  if(length(t.feat)>0)
+  {
+    thresh.index <- lambdas.file$feature[t.feat]
+    threshold    <- strsplit(thresh.index, split='<', fixed=TRUE)
+    thresh.index.c <- unlist(lapply(1:length(threshold), function(i){z <- threshold[[i]][2]; return(z)}))
+    threshold    <- unlist(lapply(1:length(threshold), function(i){z <- threshold[[i]][1]; return(z)}))
+    thresh.index.c <- gsub(pattern=')', replacement='', thresh.index.c, fixed=TRUE)
+    threshold    <- as.numeric(gsub(pattern='(', replacement='', threshold, fixed=TRUE))
+    thresh.calcs <- lapply(1:length(thresh.index), function(i)
+    {
+      lambdas.file.t <- lambdas.file[t.feat,]
+      eval(parse(text=paste('result.by.var.t <- ifelse(test=temp.dt[,',thresh.index.c[i],']<threshold[i], yes=0, no=lambdas.file.t$lambda[i])',sep='')))
+      result.by.var.t <- data.frame(result.by.var.t)
+      return(result.by.var.t)
+    })
+    thresh.calcs <- Reduce(function(...) cbind(..., deparse.level=1), thresh.calcs)
+    names(thresh.calcs) <- lambdas.file$feature[t.feat]
+    thresh.calcs <- as.data.table(thresh.calcs)
+    thresh.calcs <- thresh.calcs[,rowSums(.SD,na.rm=FALSE)]
+  } else {
+    cat('Threshold features do not exist.\n')
+  }
+  
+  ###
   
   if(exists('linear.calcs') & exists('quadratic.calcs') & exists('product.calcs')) # Linear, quadratic and product
   {
