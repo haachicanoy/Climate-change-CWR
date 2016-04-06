@@ -1,6 +1,6 @@
-# Do projections for MaxEnt runs
+# Do projections for MaxEnt runs with all type of features
 # H. Achicanoy
-# CIAT, 2015
+# CIAT, 2016
 
 make.projections <- function(k,taxon)
 {
@@ -63,6 +63,7 @@ make.projections <- function(k,taxon)
     linear.calcs <- linear.calcs[,rowSums(.SD,na.rm=FALSE)]
   } else {
     cat('Linear features do not exist.\n')
+    linear.calcs <- rep(0, nrow(temp.dt))
   }
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -88,6 +89,7 @@ make.projections <- function(k,taxon)
     quadratic.calcs <- quadratic.calcs[,rowSums(.SD,na.rm=FALSE)]
   } else {
     cat('Quadratic features do not exist.\n')
+    quadratic.calcs <- rep(0, nrow(temp.dt))
   }
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -110,6 +112,7 @@ make.projections <- function(k,taxon)
     product.calcs <- product.calcs[,rowSums(.SD,na.rm=FALSE)]
   } else {
     cat('Product features do not exist.\n')
+    product.calcs <- rep(0, nrow(temp.dt))
   }
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -133,6 +136,7 @@ make.projections <- function(k,taxon)
     forward.calcs <- forward.calcs[,rowSums(.SD,na.rm=FALSE)]
   } else {
     cat('Forward hinge features do not exist.\n')
+    forward.calcs <- rep(0, nrow(temp.dt))
   }
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -156,6 +160,7 @@ make.projections <- function(k,taxon)
     reverse.calcs <- reverse.calcs[,rowSums(.SD,na.rm=FALSE)]
   } else {
     cat('Reverse hinge features do not exist.\n')
+    reverse.calcs <- rep(0, nrow(temp.dt))
   }
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -183,29 +188,35 @@ make.projections <- function(k,taxon)
     thresh.calcs <- thresh.calcs[,rowSums(.SD,na.rm=FALSE)]
   } else {
     cat('Threshold features do not exist.\n')
+    thresh.calcs <- rep(0, nrow(temp.dt))
   }
   
-  ###
+  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= #
+  cat('\nComputing output values\n\n')
+  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= #
   
-  if(exists('linear.calcs') & exists('quadratic.calcs') & exists('product.calcs')) # Linear, quadratic and product
-  {
-    fx.calcs <- cbind(linear.calcs,quadratic.calcs,product.calcs); rm(linear.calcs,quadratic.calcs,product.calcs)
-  } else {
-    if(exists('linear.calcs') & exists('quadratic.calcs') & !exists('product.calcs')) # Linear and quadratic
-    {
-      fx.calcs <- cbind(linear.calcs,quadratic.calcs); rm(linear.calcs,quadratic.calcs)
-    } else {
-      if(exists('linear.calcs') & !exists('quadratic.calcs') & exists('product.calcs')) # Linear and product
-      {
-        fx.calcs <- cbind(linear.calcs,product.calcs); rm(linear.calcs,product.calcs)
-      } else {
-        if(exists('linear.calcs') & !exists('quadratic.calcs') & !exists('product.calcs')) # Linear only
-        {
-          cat('Projections do not available because model ran with linear features only.\n')
-        }
-      }
-    }
-  }
+  fx.calcs <- cbind(linear.calcs, quadratic.calcs, product.calcs, forward.calcs, reverse.calcs, thresh.calcs)
+  rm(linear.calcs, quadratic.calcs, product.calcs, forward.calcs, reverse.calcs, thresh.calcs)
+  
+  # if(exists('linear.calcs') & exists('quadratic.calcs') & exists('product.calcs')) # Linear, quadratic and product
+  # {
+  #   fx.calcs <- cbind(linear.calcs, quadratic.calcs, product.calcs); rm(linear.calcs, quadratic.calcs, product.calcs)
+  # } else {
+  #   if(exists('linear.calcs') & exists('quadratic.calcs') & !exists('product.calcs')) # Linear and quadratic
+  #   {
+  #     fx.calcs <- cbind(linear.calcs, quadratic.calcs); rm(linear.calcs, quadratic.calcs)
+  #   } else {
+  #     if(exists('linear.calcs') & !exists('quadratic.calcs') & exists('product.calcs')) # Linear and product
+  #     {
+  #       fx.calcs <- cbind(linear.calcs, product.calcs); rm(linear.calcs, product.calcs)
+  #     } else {
+  #       if(exists('linear.calcs') & !exists('quadratic.calcs') & !exists('product.calcs')) # Linear only
+  #       {
+  #         cat('Projections do not available because model ran with linear features only.\n')
+  #       }
+  #     }
+  #   }
+  # }
   
   if(exists('fx.calcs')) # Verify if fx.calcs exists in order to calculate projections
   {
