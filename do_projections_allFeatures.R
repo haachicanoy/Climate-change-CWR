@@ -37,11 +37,15 @@ make.projections <- function(k,taxon)
   # Read climate variables to project
   temp.dt <- climData[[taxon]][[1]][[1]]
   temp.dt <- ff(1,dim=c(ncell(temp.dt),20),vmode="double")
-  lapply(1:20,function(i){z <- climData[[taxon]][[1]][[i]]; t <- getValues(z); cat('Processing: biovariable',i,'\n'); temp.dt[,i] <- t[]; return(cat("Done\n"))})
+  lapply(1:20,function(i){z <- climData[[taxon]][[10]][[i]]; t <- getValues(z); cat('Processing: biovariable',i,'\n'); temp.dt[,i] <- t[]; return(cat("Done\n"))})
   temp.dt <- as.ffdf(temp.dt)
   names(temp.dt) <- paste0("variable.",1:20) # names(temp.dt) <- paste0("bio_",1:20)
   temp.dt <- as.data.frame(temp.dt)
   temp.dt <- data.table(temp.dt)
+  
+  temp.dt <- temp.dt[,variable.1:=NULL]
+  names(temp.dt) <- paste0("bio_", 1:19)
+  
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
   # Linear features
