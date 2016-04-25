@@ -35,16 +35,20 @@ make.projections <- function(k,taxon)
   l.feat <- setdiff(1:nrow(lambdas.file), c(t.feat, r.feat, f.feat, q.feat, p.feat)) # Linear features
   
   # Read climate variables to project
-  temp.dt <- climData[[taxon]][[1]][[1]]
-  temp.dt <- ff(1,dim=c(ncell(temp.dt),20),vmode="double")
-  lapply(1:20,function(i){z <- climData[[taxon]][[10]][[i]]; t <- getValues(z); cat('Processing: biovariable',i,'\n'); temp.dt[,i] <- t[]; return(cat("Done\n"))})
+  # temp.dt <- climData[[taxon]][[1]][[1]]
+  # temp.dt <- ff(1,dim=c(ncell(climData),20),vmode="double")
+  # lapply(1:20,function(i){z <- climData[[taxon]][[10]][[i]]; t <- getValues(z); cat('Processing: biovariable',i,'\n'); temp.dt[,i] <- t[]; return(cat("Done\n"))})
+  bioDir <- '/curie_data/ncastaneda/gap-analysis/gap_avena/biomod_modeling/current-clim'
+  bioVar <- paste(bioDir, '/bio_', 1:19, '.asc', sep='')
+  climData <- raster::stack(bioVar)
+  temp.dt <- ff(1,dim=c(ncell(temp.dt),19),vmode="double")
+  lapply(1:19,function(i){z <- climData[[i]]; t <- getValues(z); cat('Processing: biovariable',i,'\n'); temp.dt[,i] <- t[]; return(cat("Done\n"))})
   temp.dt <- as.ffdf(temp.dt)
-  names(temp.dt) <- paste0("variable.",1:20) # names(temp.dt) <- paste0("bio_",1:20)
+  names(temp.dt) <- paste0("bio_",1:19)
   temp.dt <- as.data.frame(temp.dt)
   temp.dt <- data.table(temp.dt)
-  
-  temp.dt <- temp.dt[,variable.1:=NULL]
-  names(temp.dt) <- paste0("bio_", 1:19)
+  # temp.dt <- temp.dt[,variable.1:=NULL]
+  # names(temp.dt) <- paste0("bio_", 1:19)
   
   
   # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -233,7 +237,7 @@ make.projections <- function(k,taxon)
     L.x <- (Q.x*exp(paramet.file$value[which(paramet.file$variable=="entropy")]))/(1+Q.x*exp(paramet.file$value[which(paramet.file$variable=="entropy")]))
     
     # First index corresponds to taxon information, Second index corresponds to climatic information model
-    prj_fn <- climData[[taxon]][[1]][[1]]
+    prj_fn <- climData[[1]]
     cell <- 1:ncell(prj_fn)
     prj_fn[cell] <- L.x
     

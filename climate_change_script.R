@@ -308,7 +308,7 @@ modelingStep <- function(crop)
           fit <- dismo::maxent(x=climData[[taxon]][[gcm]],
                                p=taxList[[taxon]][,c("lon","lat")],
                                a=bckList[[taxon]][,c("lon","lat")],removeDuplicates=T,
-                               args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=false","hinge=false","pictures=false","plots=false"),
+                               args=c("nowarnings","replicates=5","linear=true","quadratic=true","product=true","threshold=true","hinge=true","pictures=false","plots=false"),
                                path=crossValDir)
         },
         error=function(e){
